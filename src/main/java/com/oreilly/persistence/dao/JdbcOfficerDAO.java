@@ -19,6 +19,11 @@ import java.util.Optional;
 public class JdbcOfficerDAO implements OfficerDAO {
     private JdbcTemplate jdbcTemplate;
     private SimpleJdbcInsert insertOfficer;
+    private RowMapper<Officer> officerRowMapper =
+            (rs, rowNum) -> new Officer(rs.getInt("id"),
+                                        Rank.valueOf(rs.getString("rank")),
+                                        rs.getString("first_name"),
+                                        rs.getString("last_name"));
 
     public JdbcOfficerDAO(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
@@ -41,27 +46,13 @@ public class JdbcOfficerDAO implements OfficerDAO {
     @Override
     public Optional<Officer> findById(Integer id) {
         if (!existsById(id)) return Optional.empty();
-        return Optional.of(jdbcTemplate.queryForObject(
-                "SELECT * FROM officers WHERE id=?",
-                new RowMapper<Officer>() {  // Java 7 anonymous inner class
-                    @Override
-                    public Officer mapRow(ResultSet rs, int rowNum) throws SQLException {
-                        return new Officer(rs.getInt("id"),
-                                Rank.valueOf(rs.getString("rank")),
-                                rs.getString("first_name"),
-                                rs.getString("last_name"));
-                    }
-                },
-                id));
+        // Java 7 anonymous inner class
+        return Optional.of(jdbcTemplate.queryForObject("SELECT * FROM officers WHERE id=?", officerRowMapper, id));
     }
 
     @Override
     public List<Officer> findAll() {
-        return jdbcTemplate.query("SELECT * FROM officers",
-                (rs, rowNum) -> new Officer(rs.getInt("id"), // Java 8 lambda expression
-                                            Rank.valueOf(rs.getString("rank")),
-                                            rs.getString("first_name"),
-                                            rs.getString("last_name")));
+        return jdbcTemplate.query("SELECT * FROM officers", officerRowMapper);
     }
 
     @Override
